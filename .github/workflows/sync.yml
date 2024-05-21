@@ -21,13 +21,12 @@ jobs:
         release_data=$(curl -s $api_url)
         deb_url=$(echo $release_data | jq -r '.assets[] | select(.name | endswith("_linux_amd64.deb")) | .browser_download_url')
         echo "Latest release URL: $deb_url"
-        echo "DEB_URL=$deb_url" >> $GITHUB_ENV
-        echo "deb_url=$deb_url" >> $GITHUB_ENV
+        echo "::set-output name=deb_url::$deb_url"
 
     - name: Download and install sing-box
       run: |
         set -Eeuo pipefail
-        wget -O sing-box.deb "$deb_url"
+        wget -O sing-box.deb "${{ steps.get_release.outputs.deb_url }}"
         sudo dpkg -i sing-box.deb
 
     - name: Set up Python3
@@ -59,6 +58,7 @@ jobs:
           git commit -m "Update rules"
           git push
         fi
+
 
 
 
