@@ -21,13 +21,22 @@ jobs:
         echo "deb_url=$latest_url" >> $GITHUB_ENV
     - name: "Setup sing-box"
       run: |
-        set -Eeuo pipefail
         wget -O sing-box.deb ${{ env.deb_url }}
         sudo dpkg -i sing-box.deb
+    - name: Clear sing-box env variable
+      run: |
+        unset deb_url
     - name: Set up Python3
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
+    - name: Cache pip
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -41,14 +50,13 @@ jobs:
         git config --global user.name "GitHub Action"
         git add ./rule/*.json ./rule/*.srs
 
-        # 检查是否有文件被修改
         if git diff --staged --quiet; then
           echo "No changes to commit"
-          exit 0
         else
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           git commit -m "Update rules at $TIMESTAMP"
           git push
         fi
+
 
 
