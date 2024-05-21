@@ -23,9 +23,6 @@ jobs:
       run: |
         wget -O sing-box.deb ${{ env.deb_url }}
         sudo dpkg -i sing-box.deb
-    - name: Clear sing-box env variable
-      run: |
-        unset deb_url
     - name: Set up Python3
       uses: actions/setup-python@v2
       with:
@@ -41,8 +38,12 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pandas requests pyyaml
+    - name: Unset deb_url environment variable
+      run: |
+        unset deb_url
     - name: Run script
-      run: python ../main.py
+      run: |
+        env -u deb_url python ../main.py
       working-directory: ./rule/
     - name: Commit and push config.json
       run: |
