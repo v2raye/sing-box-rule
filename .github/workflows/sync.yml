@@ -12,18 +12,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: "Setup sing-box"
-      env:
-        SING_BOX_DEB_URL: "https://github.com/SagerNet/sing-box/releases/download/v1.8.14/sing-box_1.8.14_linux_amd64.deb"
+    - uses: actions/checkout@v2.5.0
+    - name: "Get latest sing-box release"
+      id: get_latest_release
       run: |
-          set -Eeuo pipefail
-          wget -O sing-box.deb $SING_BOX_DEB_URL
-          sudo dpkg -i sing-box.deb
+        api_url="https://api.github.com/repos/SagerNet/sing-box/releases/latest"
+        latest_url=$(curl -s $api_url | grep "browser_download_url.*_linux_amd64.deb" | cut -d '"' -f 4)
+        echo "::set-output name=deb_url::$latest_url"
+    - name: "Setup sing-box"
+      run: |
+        set -Eeuo pipefail
+        wget -O sing-box.deb ${{ steps.get_latest_release.outputs.deb_url }}
+        sudo dpkg -i sing-box.deb
     - name: Set up Python3
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v2.4.0
       with:
-        python-version: 3.x
+        python-version: '3.x'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -35,14 +39,15 @@ jobs:
       run: |
         git config --global user.email "action@github.com"
         git config --global user.name "GitHub Action"
-        git add ./rule/*.json
-        git add ./rule/*.srs
+        git add ./rule/*.json ./rule/*.srs
 
         # 检查是否有文件被修改
         if git diff --staged --quiet; then
           echo "No changes to commit"
           exit 0
         else
-          git commit -m "Update rules"
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          git commit -m "Update rules at $TIMESTAMP"
           git push
         fi
+
