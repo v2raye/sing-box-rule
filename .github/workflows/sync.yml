@@ -12,20 +12,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2.5.0
+    - uses: actions/checkout@v2
     - name: "Get latest sing-box release"
       id: get_latest_release
       run: |
         api_url="https://api.github.com/repos/SagerNet/sing-box/releases/latest"
         latest_url=$(curl -s $api_url | grep "browser_download_url.*_linux_amd64.deb" | cut -d '"' -f 4)
-        echo "::set-output name=deb_url::$latest_url"
+        echo "deb_url=$latest_url" >> $GITHUB_ENV
     - name: "Setup sing-box"
       run: |
         set -Eeuo pipefail
-        wget -O sing-box.deb ${{ steps.get_latest_release.outputs.deb_url }}
+        wget -O sing-box.deb ${{ env.deb_url }}
         sudo dpkg -i sing-box.deb
     - name: Set up Python3
-      uses: actions/setup-python@v2.4.0
+      uses: actions/setup-python@v2
       with:
         python-version: '3.x'
     - name: Install dependencies
@@ -50,4 +50,5 @@ jobs:
           git commit -m "Update rules at $TIMESTAMP"
           git push
         fi
+
 
