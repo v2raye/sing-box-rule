@@ -13,48 +13,52 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: "Get latest sing-box release"
-      id: get_latest_release
+
+    - name: Fetch latest sing-box release
+      id: get_release
       run: |
         api_url="https://api.github.com/repos/SagerNet/sing-box/releases/latest"
-        latest_url=$(curl -s $api_url | grep "browser_download_url.*_linux_amd64.deb" | cut -d '"' -f 4)
-        echo "deb_url=$latest_url" >> $GITHUB_ENV
-    - name: "Setup sing-box"
+        release_data=$(curl -s $api_url)
+        deb_url=$(echo $release_data | jq -r '.assets[] | select(.name | endswith("_linux_amd64.deb")) | .browser_download_url')
+        echo "Latest release URL: $deb_url"
+        echo "::set-output name=deb_url::$deb_url"
+
+    - name: Download and install sing-box
       run: |
-        wget -O sing-box.deb ${{ env.deb_url }}
+        set -Eeuo pipefail
+        wget -O sing-box.deb "${{ steps.get_release.outputs.deb_url }}"
         sudo dpkg -i sing-box.deb
+
     - name: Set up Python3
       uses: actions/setup-python@v2
       with:
-        python-version: '3.x'
-    - name: Cache pip
-      uses: actions/cache@v2
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+        python-version: 3.x
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pandas requests pyyaml
-    - name: Run script without deb_url
-      run: |
-        env -u deb_url python ../main.py
+
+    - name: Run script
+      run: python ../main.py
       working-directory: ./rule/
+
     - name: Commit and push config.json
       run: |
         git config --global user.email "action@github.com"
         git config --global user.name "GitHub Action"
-        git add ./rule/*.json ./rule/*.srs
+        git add ./rule/*.json
+        git add ./rule/*.srs
 
+        # 检查是否有文件被修改
         if git diff --staged --quiet; then
           echo "No changes to commit"
+          exit 0
         else
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          git commit -m "Update rules at $TIMESTAMP"
+          git commit -m "Update rules"
           git push
         fi
+
 
 
 
