@@ -25,7 +25,7 @@ jobs:
     - name: Download and install sing-box
       run: |
         set -Eeuo pipefail
-        wget -O sing-box.deb "${{ OUTPUT.DEB_URL }}"
+        wget -O sing-box.deb "${{ output.DEB_URL }}"
         sudo dpkg -i sing-box.deb
 
     - name: Set up Python3
