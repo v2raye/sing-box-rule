@@ -28,6 +28,7 @@ def read_conf_from_url(url):
     rows = []
     for line in conf_data:
         if line.strip() and not line.strip().startswith('#'):
+            print(f"Processing line: {line}")
             parts = line.split()
             if len(parts) >= 2:
                 pattern = parts[0]
