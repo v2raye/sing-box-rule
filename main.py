@@ -33,7 +33,11 @@ def read_conf_from_url(url):
                 pattern = parts[0]
                 address = parts[1]
                 rows.append({'pattern': pattern.strip(), 'address': address.strip(), 'other': None})
-    df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
+    if rows:
+        df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
+    else:
+        print("No valid data found in the conf file.")
+        df = pd.DataFrame(columns=['pattern', 'address', 'other'])
     return df
 
 def is_ipv4_or_ipv6(address):
@@ -148,3 +152,4 @@ result_file_names = []
 for link in links:
     result_file_name = parse_list_file(link, output_directory=output_dir)
     result_file_names.append(result_file_name)
+
