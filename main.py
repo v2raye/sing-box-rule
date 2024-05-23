@@ -131,4 +131,27 @@ def parse_list_file(link, output_directory):
         result_rules["rules"].insert(0, {'domain': domain_entries})
 
     # 使用 output_directory 拼接完整路径
-    file_name = os.path.join(output_directory, f"{os.path.basename(link).
+    file_name = os.path.join(output_directory, f"{os.path.basename(link)}.json")
+    with open(file_name, 'w', encoding='utf-8') as output_file:
+        json.dump(sort_dict(result_rules), output_file, ensure_ascii=False, indent=2)
+
+    srs_path = file_name.replace(".json", ".srs")
+    os.system(f"sing-box rule-set compile --output {srs_path} {file_name}")
+    return file_name
+
+# 读取 links.txt 中的每个链接并生成对应的 JSON 文件
+with open("links.txt", 'r') as links_file:
+    links = links_file.read().splitlines()
+
+links = [l for l in links if l.strip() and not l.strip().startswith("#")]
+
+output_dir = "./"
+result_file_names = []
+
+for link in links:
+    result_file_name = parse_list_file(link, output_directory=output_dir)
+    result_file_names.append(result_file_name)
+
+# 打印生成的文件名
+# for file_name in result_file_names:
+#     print(file_name)
