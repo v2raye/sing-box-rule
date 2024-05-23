@@ -28,7 +28,7 @@ def read_conf_from_url(url):
     rows = []
     for line in conf_data:
         if line.strip() and not line.strip().startswith('#'):
-            print(f"Processing line: {line}")
+            print(f"Processing line: {line}")  # 调试语句
             parts = line.split()
             if len(parts) >= 2:
                 pattern = parts[0]
@@ -153,4 +153,3 @@ result_file_names = []
 for link in links:
     result_file_name = parse_list_file(link, output_directory=output_dir)
     result_file_names.append(result_file_name)
-
