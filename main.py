@@ -28,6 +28,7 @@ def read_conf_from_url(url):
     rows = []
     for line in conf_data:
         if line.strip() and not line.strip().startswith('#'):
+            print(f"Processing line: {line}")  # 调试语句
             parts = line.split()
             if len(parts) >= 2:
                 pattern = parts[0]
@@ -35,7 +36,10 @@ def read_conf_from_url(url):
                 rows.append({'pattern': pattern.strip(), 'address': address.strip(), 'other': None})
     if rows:
         df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
+        print("DataFrame from conf file:")
+        print(df)  # 调试语句
     else:
+        print("No valid data found in the conf file.")
         df = pd.DataFrame(columns=['pattern', 'address', 'other'])
     return df
 
@@ -101,6 +105,9 @@ def parse_list_file(link, output_directory):
         results = list(executor.map(parse_and_convert_to_dataframe, [link]))
         df = pd.concat(results, ignore_index=True)
 
+    print("Combined DataFrame:")
+    print(df)  # 调试语句
+
     df = df[~df['pattern'].str.contains('#')].reset_index(drop=True)
 
     map_dict = {'DOMAIN-SUFFIX': 'domain_suffix', 'HOST-SUFFIX': 'domain_suffix', 'DOMAIN': 'domain', 'HOST': 'domain', 'host': 'domain',
@@ -112,6 +119,9 @@ def parse_list_file(link, output_directory):
     df = df[df['pattern'].isin(map_dict.keys())].reset_index(drop=True)
     df = df.drop_duplicates().reset_index(drop=True)
     df['pattern'] = df['pattern'].replace(map_dict)
+
+    print("Mapped and Filtered DataFrame:")
+    print(df)  # 调试语句
 
     os.makedirs(output_directory, exist_ok=True)
 
@@ -132,6 +142,9 @@ def parse_list_file(link, output_directory):
     domain_entries = list(set(domain_entries))
     if domain_entries:
         result_rules["rules"].insert(0, {'domain': domain_entries})
+
+    print("Resulting Rules:")
+    print(result_rules)  # 调试语句
 
     file_name = os.path.join(output_directory, f"{os.path.basename(link).split('.')[0]}.json")
     with open(file_name, 'w', encoding='utf-8') as output_file:
