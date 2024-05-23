@@ -5,6 +5,7 @@ import json
 import requests
 import yaml
 import ipaddress
+from urllib.parse import urlparse
 
 def read_yaml_from_url(url):
     response = requests.get(url)
@@ -52,40 +53,79 @@ def is_ipv4_or_ipv6(address):
             return None
 
 def parse_and_convert_to_dataframe(link):
-    if link.endswith('.yaml') or link.endswith('.txt'):
-        try:
-            yaml_data = read_yaml_from_url(link)
-            rows = []
-            if not isinstance(yaml_data, str):
-                items = yaml_data.get('payload', [])
-            else:
-                lines = yaml_data.splitlines()
-                line_content = lines[0]
-                items = line_content.split()
-            for item in items:
-                address = item.strip("'")
-                if ',' not in item:
-                    if is_ipv4_or_ipv6(item):
-                        pattern = 'IP-CIDR'
-                    else:
-                        if address.startswith('+') or address.startswith('.'):
-                            pattern = 'DOMAIN-SUFFIX'
-                            address = address[1:]
-                            if address.startswith('.'):
-                                address = address[1:]
-                        else:
-                            pattern = 'DOMAIN'
+    parsed_url = urlparse(link)
+    if parsed_url.scheme in ('http', 'https'):
+        if link.endswith('.yaml'):
+            try:
+                yaml_data = read_yaml_from_url(link)
+                rows = []
+                if not isinstance(yaml_data, str):
+                    items = yaml_data.get('payload', [])
                 else:
-                    pattern, address = item.split(',', 1)
-                rows.append({'pattern': pattern.strip(), 'address': address.strip(), 'other': None})
-            df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
-        except:
-            df = read_list_from_url(link)
-    elif link.endswith('.conf'):
-        df = read_conf_file(link)
+                    lines = yaml_data.splitlines()
+                    line_content = lines[0]
+                    items = line_content.split()
+                for item in items:
+                    address = item.strip("'")
+                    if ',' not in item:
+                        if is_ipv4_or_ipv6(item):
+                            pattern = 'IP-CIDR'
+                        else:
+                            if address.startswith('+') or address.startswith('.'):
+                                pattern = 'DOMAIN-SUFFIX'
+                                address = address[1:]
+                                if address.startswith('.'):
+                                    address = address[1:]
+                            else:
+                                pattern = 'DOMAIN'
+                    else:
+                        pattern, address = item.split(',', 1)
+                    rows.append({'pattern': pattern.strip(), 'address': address.strip(), 'other': None})
+                return pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
+            except:
+                return read_list_from_url(link)
+        elif link.endswith('.conf'):
+            return read_conf_file(link)
+        else:
+            return read_list_from_url(link)
     else:
-        df = read_list_from_url(link)
-    return df
+        if os.path.exists(link):
+            if link.endswith('.yaml'):
+                try:
+                    yaml_data = read_yaml_from_url(link)
+                    rows = []
+                    if not isinstance(yaml_data, str):
+                        items = yaml_data.get('payload', [])
+                    else:
+                        lines = yaml_data.splitlines()
+                        line_content = lines[0]
+                        items = line_content.split()
+                    for item in items:
+                        address = item.strip("'")
+                        if ',' not in item:
+                            if is_ipv4_or_ipv6(item):
+                                pattern = 'IP-CIDR'
+                            else:
+                                if address.startswith('+') or address.startswith('.'):
+                                    pattern = 'DOMAIN-SUFFIX'
+                                    address = address[1:]
+                                    if address.startswith('.'):
+                                        address = address[1:]
+                                else:
+                                    pattern = 'DOMAIN'
+                        else:
+                            pattern, address = item.split(',', 1)
+                        rows.append({'pattern': pattern.strip(), 'address': address.strip(), 'other': None})
+                    return pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
+                except:
+                    return read_list_from_url(link)
+            elif link.endswith('.conf'):
+                return read_conf_file(link)
+            else:
+                return read_list_from_url(link)
+        else:
+            print(f"File {link} does not exist.")
+            return pd.DataFrame(columns=['pattern', 'address', 'other'])
 
 def sort_dict(obj):
     if isinstance(obj, dict):
@@ -125,32 +165,4 @@ def parse_list_file(link, output_directory):
             result_rules["rules"].append(rule_entry)
             domain_entries.extend([address.strip() for address in addresses])
         elif pattern == 'domain':
-            domain_entries.extend([address.strip() for address in addresses])
-        else:
-            rule_entry = {pattern: [address.strip() for address in addresses]}
-            result_rules["rules"].append(rule_entry)
-    
-    domain_entries = list(set(domain_entries))
-    if domain_entries:
-        result_rules["rules"].insert(0, {'domain': domain_entries})
-
-    file_name = os.path.join(output_directory, f"{os.path.basename(link).split('.')[0]}.json")
-    with open(file_name, 'w', encoding='utf-8') as output_file:
-        json.dump(sort_dict(result_rules), output_file, ensure_ascii=False, indent=2)
-
-    srs_path = file_name.replace(".json", ".srs")
-    os.system(f"sing-box rule-set compile --output {srs_path} {file_name}")
-    return file_name
-
-with open("../links.txt", 'r') as links_file:
-    links = links_file.read().splitlines()
-
-links = [l for l in links if l.strip() and not l.strip().startswith("#")]
-
-output_dir = "./"
-result_file_names = []
-
-for link in links:
-    result_file_name = parse_list_file(link, output_directory=output_dir)
-    result_file_names.append(result_file_name)
-
+            domain_entries.extend([address
