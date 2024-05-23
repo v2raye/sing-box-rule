@@ -8,7 +8,7 @@ import ipaddress
 
 def read_yaml_from_url(url):
     response = requests.get(url)
-    response.raise_for_status()  
+    response.raise_for_status()
     yaml_data = yaml.safe_load(response.text)
     return yaml_data
 
@@ -28,7 +28,7 @@ def read_conf_from_url(url):
     rows = []
     for line in conf_data:
         if line.strip() and not line.strip().startswith('#'):
-            print(f"Processing line: {line}")  # 调试语句
+            print(f"Processing line: {line}")  # Debug statement
             parts = line.split()
             if len(parts) >= 2:
                 pattern = parts[0]
@@ -37,7 +37,7 @@ def read_conf_from_url(url):
     if rows:
         df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
         print("DataFrame from conf file:")
-        print(df)  # 调试语句
+        print(df)  # Debug statement
     else:
         print("No valid data found in the conf file.")
         df = pd.DataFrame(columns=['pattern', 'address', 'other'])
@@ -55,6 +55,7 @@ def is_ipv4_or_ipv6(address):
             return None
 
 def parse_and_convert_to_dataframe(link):
+    print(f"Parsing link: {link}")  # Debug statement
     if link.endswith('.yaml') or link.endswith('.txt'):
         try:
             yaml_data = read_yaml_from_url(link)
@@ -79,15 +80,18 @@ def parse_and_convert_to_dataframe(link):
                         else:
                             pattern = 'DOMAIN'
                 else:
-                    pattern, address = item.split(',', 1)  
+                    pattern, address = item.split(',', 1)
                 rows.append({'pattern': pattern.strip(), 'address': address.strip(), 'other': None})
             df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
-        except:
+        except Exception as e:
+            print(f"Error parsing yaml/txt file: {e}")  # Debug statement
             df = read_list_from_url(link)
     elif link.endswith('.conf'):
         df = read_conf_from_url(link)
     else:
         df = read_list_from_url(link)
+    print(f"DataFrame from link {link}:")
+    print(df)  # Debug statement
     return df
 
 def sort_dict(obj):
@@ -106,22 +110,21 @@ def parse_list_file(link, output_directory):
         df = pd.concat(results, ignore_index=True)
 
     print("Combined DataFrame:")
-    print(df)  # 调试语句
+    print(df)  # Debug statement
 
     df = df[~df['pattern'].str.contains('#')].reset_index(drop=True)
 
     map_dict = {'DOMAIN-SUFFIX': 'domain_suffix', 'HOST-SUFFIX': 'domain_suffix', 'DOMAIN': 'domain', 'HOST': 'domain', 'host': 'domain',
-                'DOMAIN-KEYWORD':'domain_keyword', 'HOST-KEYWORD': 'domain_keyword', 'host-keyword': 'domain_keyword', 'IP-CIDR': 'ip_cidr',
-                'ip-cidr': 'ip_cidr', 'IP-CIDR6': 'ip_cidr', 
-                'IP6-CIDR': 'ip_cidr','SRC-IP-CIDR': 'source_ip_cidr', 'GEOIP': 'geoip', 'DST-PORT': 'port',
-                'SRC-PORT': 'source_port', "URL-REGEX": "domain_regex"}
+                'DOMAIN-KEYWORD': 'domain_keyword', 'HOST-KEYWORD': 'domain_keyword', 'host-keyword': 'domain_keyword', 'IP-CIDR': 'ip_cidr',
+                'ip-cidr': 'ip_cidr', 'IP-CIDR6': 'ip_cidr', 'IP6-CIDR': 'ip_cidr', 'SRC-IP-CIDR': 'source_ip_cidr', 'GEOIP': 'geoip',
+                'DST-PORT': 'port', 'SRC-PORT': 'source_port', 'URL-REGEX': 'domain_regex'}
 
     df = df[df['pattern'].isin(map_dict.keys())].reset_index(drop=True)
     df = df.drop_duplicates().reset_index(drop=True)
     df['pattern'] = df['pattern'].replace(map_dict)
 
     print("Mapped and Filtered DataFrame:")
-    print(df)  # 调试语句
+    print(df)  # Debug statement
 
     os.makedirs(output_directory, exist_ok=True)
 
@@ -144,7 +147,7 @@ def parse_list_file(link, output_directory):
         result_rules["rules"].insert(0, {'domain': domain_entries})
 
     print("Resulting Rules:")
-    print(result_rules)  # 调试语句
+    print(result_rules)  # Debug statement
 
     file_name = os.path.join(output_directory, f"{os.path.basename(link).split('.')[0]}.json")
     with open(file_name, 'w', encoding='utf-8') as output_file:
@@ -154,12 +157,12 @@ def parse_list_file(link, output_directory):
     os.system(f"sing-box rule-set compile --output {srs_path} {file_name}")
     return file_name
 
-with open("../links.txt", 'r') as links_file:
+with open("links.txt", 'r') as links_file:
     links = links_file.read().splitlines()
 
 links = [l for l in links if l.strip() and not l.strip().startswith("#")]
 
-output_dir = "./"
+output_dir = "./rule/"
 result_file_names = []
 
 for link in links:
