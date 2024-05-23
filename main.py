@@ -67,19 +67,6 @@ def parse_and_convert_to_dataframe(link):
         df = read_list_from_url(link)
     return df
 
-def read_conf_file(file_path):
-    with open(file_path, 'r') as file:
-        data = file.readlines()
-    data = [line.strip() for line in data if not line.startswith('#') and line.strip()]
-    rows = []
-    for line in data:
-        parts = line.split()
-        if len(parts) == 2:
-            pattern, address = parts
-            rows.append({'pattern': pattern.strip(), 'address': address.strip(), 'other': None})
-    df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
-    return df
-
 # 对字典进行排序，含list of dict
 def sort_dict(obj):
     if isinstance(obj, dict):
@@ -132,11 +119,12 @@ def parse_list_file(link, output_directory):
         else:
             rule_entry = {pattern: [address.strip() for address in addresses]}
             result_rules["rules"].append(rule_entry)
-
+    # 删除 'domain_entries' 中的重复值
     domain_entries = list(set(domain_entries))
     if domain_entries:
         result_rules["rules"].insert(0, {'domain': domain_entries})
 
+    # 使用 output_directory 拼接完整路径
     file_name = os.path.join(output_directory, f"{os.path.basename(link).split('.')[0]}.json")
     with open(file_name, 'w', encoding='utf-8') as output_file:
         json.dump(sort_dict(result_rules), output_file, ensure_ascii=False, indent=2)
@@ -145,6 +133,7 @@ def parse_list_file(link, output_directory):
     os.system(f"sing-box rule-set compile --output {srs_path} {file_name}")
     return file_name
 
+# 读取 links.txt 中的每个链接并生成对应的 JSON 文件
 with open("../links.txt", 'r') as links_file:
     links = links_file.read().splitlines()
 
@@ -156,3 +145,7 @@ result_file_names = []
 for link in links:
     result_file_name = parse_list_file(link, output_directory=output_dir)
     result_file_names.append(result_file_name)
+
+# 打印生成的文件名
+# for file_name in result_file_names:
+    # print(file_name)  原始代码 可以找到links.txt
