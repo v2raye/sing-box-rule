@@ -39,6 +39,7 @@ def read_conf_from_url(url):
     if not rows:
         print(f"No valid rows found in conf file from {url}")
     df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
+    print(f"DataFrame from conf file {url}:\n{df}")
     return df
 
 def read_list_from_text(url):
@@ -59,6 +60,7 @@ def read_list_from_text(url):
     if not rows:
         print(f"No valid rows found in list file from {url}")
     df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
+    print(f"DataFrame from list file {url}:\n{df}")
     return df
 
 def is_ipv4_or_ipv6(address):
@@ -73,6 +75,7 @@ def is_ipv4_or_ipv6(address):
             return None
 
 def parse_and_convert_to_dataframe(link):
+    print(f"Processing file: {link}")
     if link.endswith('.yaml') or link.endswith('.txt'):
         try:
             yaml_data = read_yaml_from_url(link)
@@ -100,11 +103,13 @@ def parse_and_convert_to_dataframe(link):
                     pattern, address = item.split(',', 1)
                 rows.append({'pattern': pattern.strip(), 'address': address.strip(), 'other': None})
             df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
+            print(f"DataFrame from yaml/txt file {link}:\n{df}")
         except Exception as e:
             print(f"Error reading yaml or txt file {link}: {e}")
             df = read_list_from_url(link)
     elif link.endswith('.csv'):
         df = read_list_from_url(link)
+        print(f"DataFrame from csv file {link}:\n{df}")
     elif link.endswith('.conf'):
         df = read_conf_from_url(link)
     elif link.endswith('.list'):
@@ -132,6 +137,8 @@ def parse_list_file(link, output_directory):
         print(f"No valid data found in file from {link}")
         return None
 
+    print(f"Initial DataFrame from file {link}:\n{df}")
+
     df = df[~df['pattern'].str.contains('#')].reset_index(drop=True)
 
     map_dict = {'DOMAIN-SUFFIX': 'domain_suffix', 'HOST-SUFFIX': 'domain_suffix', 'DOMAIN': 'domain', 'HOST': 'domain', 'host': 'domain',
@@ -144,6 +151,8 @@ def parse_list_file(link, output_directory):
 
     df = df.drop_duplicates().reset_index(drop=True)
     df['pattern'] = df['pattern'].replace(map_dict)
+
+    print(f"Filtered and mapped DataFrame from file {link}:\n{df}")
 
     os.makedirs(output_directory, exist_ok=True)
 
