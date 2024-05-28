@@ -31,14 +31,13 @@ def read_conf_from_url(url):
         if not line or line.startswith('#'):
             continue
         parts = line.split()
-        if len(parts) == 2:
-            pattern, address = parts
-            rows.append({'pattern': pattern, 'address': address, 'other': None})
-        elif len(parts) > 2:
+        if len(parts) >= 2:
             pattern = parts[0]
             address = parts[1]
-            other = " ".join(parts[2:])
+            other = " ".join(parts[2:]) if len(parts) > 2 else None
             rows.append({'pattern': pattern, 'address': address, 'other': other})
+    if not rows:
+        print(f"No valid rows found in conf file from {url}")
     df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
     return df
 
@@ -52,14 +51,13 @@ def read_list_from_text(url):
         if not line or line.startswith('#'):
             continue
         parts = line.split()
-        if len(parts) == 2:
-            pattern, address = parts
-            rows.append({'pattern': pattern, 'address': address, 'other': None})
-        elif len(parts) > 2:
+        if len(parts) >= 2:
             pattern = parts[0]
             address = parts[1]
-            other = " ".join(parts[2:])
+            other = " ".join(parts[2:]) if len(parts) > 2 else None
             rows.append({'pattern': pattern, 'address': address, 'other': other})
+    if not rows:
+        print(f"No valid rows found in list file from {url}")
     df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
     return df
 
@@ -102,7 +100,8 @@ def parse_and_convert_to_dataframe(link):
                     pattern, address = item.split(',', 1)
                 rows.append({'pattern': pattern.strip(), 'address': address.strip(), 'other': None})
             df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
-        except:
+        except Exception as e:
+            print(f"Error reading yaml or txt file {link}: {e}")
             df = read_list_from_url(link)
     elif link.endswith('.csv'):
         df = read_list_from_url(link)
@@ -128,6 +127,10 @@ def parse_list_file(link, output_directory):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         results = list(executor.map(parse_and_convert_to_dataframe, [link]))
         df = pd.concat(results, ignore_index=True)
+
+    if df.empty:
+        print(f"No valid data found in file from {link}")
+        return None
 
     df = df[~df['pattern'].str.contains('#')].reset_index(drop=True)
 
@@ -180,6 +183,9 @@ result_file_names = []
 
 for link in links:
     result_file_name = parse_list_file(link, output_directory=output_dir)
-    result_file_names.append(result_file_name)
+    if result_file_name:
+        result_file_names.append(result_file_name)
 
-
+# 打印生成的文件名
+for file_name in result_file_names:
+    print(file_name)
