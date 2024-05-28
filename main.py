@@ -42,6 +42,27 @@ def read_conf_from_url(url):
     df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
     return df
 
+def read_list_from_text(url):
+    response = requests.get(url)
+    response.raise_for_status()
+    lines = response.text.splitlines()
+    rows = []
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        parts = line.split()
+        if len(parts) == 2:
+            pattern, address = parts
+            rows.append({'pattern': pattern, 'address': address, 'other': None})
+        elif len(parts) > 2:
+            pattern = parts[0]
+            address = parts[1]
+            other = " ".join(parts[2:])
+            rows.append({'pattern': pattern, 'address': address, 'other': other})
+    df = pd.DataFrame(rows, columns=['pattern', 'address', 'other'])
+    return df
+
 def is_ipv4_or_ipv6(address):
     try:
         ipaddress.IPv4Network(address)
@@ -87,6 +108,8 @@ def parse_and_convert_to_dataframe(link):
         df = read_list_from_url(link)
     elif link.endswith('.conf'):
         df = read_conf_from_url(link)
+    elif link.endswith('.list'):
+        df = read_list_from_text(link)
     else:
         raise ValueError(f"Unsupported file type: {link}")
     return df
@@ -158,4 +181,5 @@ result_file_names = []
 for link in links:
     result_file_name = parse_list_file(link, output_directory=output_dir)
     result_file_names.append(result_file_name)
+
 
